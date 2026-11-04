@@ -42,21 +42,17 @@ class Customdataset(Dataset):
         new_width = int(img1.width * scale_factor)
         new_height = int(img1.height * scale_factor)
         
-        # 应用相同的缩放操作到所有图像（使用新的 InterpolationMode）
         img1 = TF.resize(img1, (new_height, new_width), interpolation=InterpolationMode.BILINEAR)
         img2 = TF.resize(img2, (new_height, new_width), interpolation=InterpolationMode.BILINEAR)
-        img3 = TF.resize(img3, (new_height, new_width), interpolation=InterpolationMode.NEAREST)  # 对标签使用最近邻插值
+        img3 = TF.resize(img3, (new_height, new_width), interpolation=InterpolationMode.NEAREST)
         
-        # 随机选择镜像操作
-        h_flip = random.random() > 0.5  # 50%概率水平翻转
+        h_flip = random.random() > 0.5
         
-        # 应用相同的镜像操作到所有图像
         if h_flip:
             img1 = TF.hflip(img1)
             img2 = TF.hflip(img2)
             img3 = TF.hflip(img3)
         
-        # 随机裁剪到目标尺寸
         i, j, h, w = transforms.RandomCrop.get_params(img1, output_size=(self.resize_h, self.resize_w))
         
         img1 = TF.crop(img1, i, j, h, w)
@@ -133,7 +129,6 @@ class SegmentationVisualizer:
     def __init__(self, segmentation_tensor):
         self.segmentation_tensor = segmentation_tensor
 
-        # 定义颜色图（colors map）
         self.color_map = np.array([
             [0, 0, 0],           # 0:unlabelled
             [179, 228, 228],     # 1:road

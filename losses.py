@@ -24,28 +24,18 @@ class FusionLoss(nn.Module):
         输出: 
             mask -> (B, 1, H, W)
         """
-        # 1. 处理背景掩码 (B, 1, H, W)
-        # 建议直接在 map 上操作，无需 unsqueeze(-1) 和 permute
         background_mask = torch.isin(map, self.background_classes).unsqueeze(1).float()
 
-        # 2. 生成需要抑制的类别区域布尔掩码 (B, 1, H, W)
         tmp_mask = torch.isin(map, self.suppress_classes).unsqueeze(1)
         tmp_mask_float = tmp_mask.float()
 
-        # 3. 按图片计算独立阈值 (B, 1, 1, 1)
-        # 计算每张图中指定区域的红外亮度总和
         sum_ir = torch.sum(ir * tmp_mask_float, dim=(2, 3), keepdim=True)
-        # 计算每张图中指定区域的像素个数
         count_pixel = torch.sum(tmp_mask_float, dim=(2, 3), keepdim=True)
 
-        # 避免除以 0 (防止某张图完全没有 suppress_classes)
         threshold = sum_ir / (count_pixel + 1e-6)
 
-        # 4. 生成抑制掩码 (B, 1, H, W)
-        # 只有在 tmp_mask 区域内且大于该图阈值的像素才为 True
         suppress_mask = (ir * tmp_mask_float > threshold).float()
 
-        # 返回合并后的掩码 (确保是 float 类型)
         return background_mask + suppress_mask
 
         
@@ -119,23 +109,17 @@ class DiceLoss(nn.Module):
         logits: [B, C, H, W] 网络的原始输出
         target: [B, H, W] 标签，值在 [0, C-1] 之间
         """
-        # 1. 转换 logits 为概率分布
         probs = F.softmax(logits, dim=1)
         
-        # 2. 将 target 转换为 one-hot 编码: [B, H, W] -> [B, C, H, W]
         target_one_hot = F.one_hot(target, num_classes=self.n_classes)
         target_one_hot = target_one_hot.permute(0, 3, 1, 2).float()
 
-        # 3. 计算 Intersection 和 Union
-        # 在 [B, H, W] 维度上求和，保留 [C] 维度
         dims = (0, 2, 3)
         intersection = torch.sum(probs * target_one_hot, dims)
         cardinality = torch.sum(probs + target_one_hot, dims)
 
-        # 4. 计算 Dice 系数
         dice_score = (2. * intersection + self.smooth) / (cardinality + self.smooth)
         
-        # 5. 返回 Dice Loss (通常用 1 - Dice)
         return 1. - dice_score.mean()
         
 class Loss(nn.Module):
@@ -146,12 +130,10 @@ class Loss(nn.Module):
 
     def rgb_to_grayscale(self,tensor):
     
-        r = tensor[:, 0:1, :, :]  # 红色通道 (B, 1, H, W)
-        g = tensor[:, 1:2, :, :]  # 绿色通道 (B, 1, H, W)
-        b = tensor[:, 2:3, :, :]  # 蓝色通道 (B, 1, H, W)
+        r = tensor[:, 0:1, :, :]
+        g = tensor[:, 1:2, :, :]
+        b = tensor[:, 2:3, :, :]
         
-        # 使用标准转换公式
-        # 灰度 = 0.299 * R + 0.587 * G + 0.114 * B
         gray = 0.299 * r + 0.587 * g + 0.114 * b
         return gray 
     def forward(self,image_vis, image_ir,generate_img,seg,labels,flag):
