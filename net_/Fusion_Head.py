@@ -11,30 +11,25 @@ class HighIntensityCNN(nn.Module):
         """
         super().__init__()
         
-        # 特征提取主干 (保持空间分辨率)
         self.feature_extractor = nn.Sequential(
-            # 第一层: 增强对比度
             nn.Conv2d(in_channels, 32, 3, padding=1),
             nn.ReLU(inplace=True),
             
             
         )
         
-        # 高亮度响应层
         self.intensity_head = nn.Sequential(
             nn.Conv2d(32, 32, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 1, 1),  # 输出单通道特征图
-            nn.Sigmoid()  # 转换为0-1概率值
+            nn.Conv2d(32, 1, 1),
+            nn.Sigmoid()
         )
         
         
 
     def forward(self, x):
-        # 提取多尺度特征
         features = self.feature_extractor(x)
         
-        # 生成主高亮度特征图
         intensity_map = self.intensity_head(features)
         
         
@@ -52,7 +47,6 @@ class SemanticMaskExtractor(nn.Module):
         """
         super().__init__()
         self.target_classes = target_classes
-        # 创建目标类别集用于快速查询
         self.target_set = set(target_classes)
         
     def forward(self, seg_map):
@@ -66,19 +60,14 @@ class SemanticMaskExtractor(nn.Module):
         
         B, N_class, H, W = seg_map.shape
         
-        # 1. 获取每个像素点的预测类别
         pred_classes = seg_map.argmax(dim=1)  # (B, H, W)
         
-        # 2. 创建目标类别掩膜
         target_mask = torch.zeros(B, H, W, dtype=torch.bool, device=seg_map.device)
         
-        # 3. 检查每个目标类别
         for class_idx in self.target_classes:
             if 0 <= class_idx < N_class:
-                # 标记属于该类别的像素
                 target_mask |= (pred_classes == class_idx)
         
-        # 4. 扩展维度并转为浮点类型
         return target_mask.unsqueeze(1).float()
 
 class DR_mask(nn.Module):

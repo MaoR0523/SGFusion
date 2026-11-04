@@ -360,7 +360,6 @@ class RGBXTransformer(nn.Module):
                 return
 
             checkpoint = torch.load(pretrained, map_location='cpu')
-            # 兼容不同的存储格式
             state_dict = checkpoint.get('model', checkpoint.get('state_dict', checkpoint))
             
             model_dict = self.state_dict()
@@ -369,13 +368,9 @@ class RGBXTransformer(nn.Module):
             print(f"=> Loading pretrained weights from {pretrained}...")
             
             for k, v in state_dict.items():
-                # --- 1. 处理 RGB (主) 路径 ---
                 if k in model_dict and model_dict[k].shape == v.shape:
                     dual_state_dict[k] = v
                 
-                # --- 2. 处理 Extra (辅助) 路径 ---
-                # 使用更严谨的替换逻辑，避免 'patch_embed.norm' 被错误替换两次
-                # 我们只针对顶层模块名进行替换
                 extra_k = None
                 if k.startswith('patch_embed'):
                     extra_k = k.replace('patch_embed', 'extra_patch_embed', 1)
@@ -387,7 +382,6 @@ class RGBXTransformer(nn.Module):
                 if extra_k and extra_k in model_dict:
                     if model_dict[extra_k].shape == v.shape:
                         dual_state_dict[extra_k] = v
-            # 使用 strict=False，因为 IGMAVCs 和 PCASCs 不在 MIT 预训练权重中
             msg = self.load_state_dict(dual_state_dict, strict=False)
             print(f"Successfully loaded weights from {pretrained}")
             print(f"Missing keys (Expected: Fusion modules): {len(msg.missing_keys)}")

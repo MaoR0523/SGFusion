@@ -6,10 +6,8 @@ import math
 
 class ToTensorKeepValues:
     def __call__(self, img):
-        # 将 PIL Image 转换为 NumPy 数组
         img_array = np.array(img)
-        # 将 NumPy 数组转换为 PyTorch 张量
-        return torch.from_numpy(img_array).long()  # 保持原有值，并转为 long 类型
+        return torch.from_numpy(img_array).long()
     
 #########################################################################################  
 ###########  Interactive Gated Mix Attention module for Visual Completion ###############
